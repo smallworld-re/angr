@@ -13,7 +13,7 @@ from .vex.heavy.heavy import VEXEarlyExit
 from angr import sim_options as o
 from angr.misc.ux import once
 from angr.state_plugins.inspect import BP_AFTER, BP_BEFORE
-from angr.state_plugins.unicorn_engine import STOP, _UC_NATIVE, unicorn as uc_module
+from angr.state_plugins.unicorn_engine import STOP, _UC_NATIVE, _try_load_uc_native, unicorn as uc_module
 from angr.utils.constants import DEFAULT_STATEMENT
 
 # pylint: disable=arguments-differ
@@ -68,6 +68,8 @@ class SimEngineUnicorn(SuccessorsEngine):
         if o.UNICORN not in state.options:
             l.debug("Unicorn-engine is not enabled.")
             return False
+
+        _try_load_uc_native()
 
         if uc_module is None or _UC_NATIVE is None:
             if once("unicorn_install_warning"):

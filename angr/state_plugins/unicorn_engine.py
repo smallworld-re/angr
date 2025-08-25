@@ -558,15 +558,44 @@ def _load_native():
         raise ImportError("Unable to import native SimUnicorn support") from e
 
 
-try:
-    _UC_NATIVE = _load_native()
-    # _UC_NATIVE.logSetLogLevel(2)
-except ImportError:
-    _UC_NATIVE = None
+# UC native module.
+#
+# This is initialized lazily to avoid linker conflicts.
+# If you need to use this, make sure that _try_load_uc_native()
+# gets invoked at some point.
+_UC_NATIVE = None
 
-if _uc is not None and _UC_NATIVE is not None and not _UC_NATIVE.setup_imports(_uc._name.encode()):
-    l.error("Unicorn engine has an incompatible API. Support disabled.")
-    unicorn = None
+
+def _try_load_uc_native():
+    """
+    Attempt to load the Unicorn native module.
+
+    The Unicorn shared library exports symbols that conflict
+    with other QEMU-based tools.
+    This causes extremely interesting linker errors on Linux.
+
+    This function mitigates this problem
+    by waiting until the Unicorn engine is actually exercised
+    before actually loading the native module.
+    This allows the VEX and Pcode engines to coexist
+    with a QEMU-based tool.
+    """
+
+    global unicorn
+    global _UC_NATIVE
+
+    if _UC_NATIVE is not None:
+        return
+
+    try:
+        _UC_NATIVE = _load_native()
+        # _UC_NATIVE.logSetLogLevel(2)
+    except ImportError:
+        _UC_NATIVE = None
+
+    if _uc is not None and _UC_NATIVE is not None and not _UC_NATIVE.setup_imports(_uc._name.encode()):
+        l.error("Unicorn engine has an incompatible API. Support disabled.")
+        unicorn = None
 
 
 class Unicorn(SimStatePlugin):
@@ -602,6 +631,9 @@ class Unicorn(SimStatePlugin):
         """
 
         SimStatePlugin.__init__(self)
+
+        # Lazy-load _UC_NATIVE
+        _try_load_uc_native()
 
         self._syscall_pc = None
         self.jumpkind = "Ijk_Boring"

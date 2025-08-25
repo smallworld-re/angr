@@ -16,6 +16,9 @@ try:
 except ImportError:
     print("If you install gitpython (`pip install gitpython`), I can give you git info too!")
 
+# Lazy-import _UC_NATIVE
+# See this function's comments for an explanation of why this is necessary
+angr.state_plugins.unicorn_engine._try_load_uc_native()
 
 angr_modules = ["angr", "ailment", "cle", "pyvex", "claripy", "archinfo", "z3", "unicorn"]
 native_modules = {
